@@ -1,0 +1,149 @@
+
+database = {
+    1: {"name": "Ноутбук   ", "price": 25000.50, "stock": 5},
+    2: {"name": "Мишка     ", "price": 450.00, "stock": 15},
+    3: {"name": "Клавіатура", "price": 1200.99, "stock": 8}
+}
+
+
+
+cart = {}
+
+# ЛЯМБДА-ФУНКЦІЯ для форматування ціни
+# Вона приймає число (price) і повертає рядок у форматі "ххх.ххгрн" (дві цифри після крапки)
+format_price = lambda price: f"{price:.2f}грн"
+
+
+def show_catalog():
+    print("\n--- КАТАЛОГ ТОВАРІВ ---")
+    # Перебираємо нашу базу даних
+    for product_id, product in database.items():
+        # Показуємо товар покупцю лише якщо він є в наявності (stock > 0)
+        if product["stock"] > 0:
+            print(f"ID: {product_id} | {product['name']} | Ціна: {format_price(product['price'])}")
+
+
+def add_to_cart():
+    show_catalog() # pokazuemo katalog pered tim, yak dodavaty v koshyk
+    try:
+        product_id = int(input("\nВведіть ID товару, який хочете додати в кошик: "))
+        
+        # Перевіряємо, чи є такий ID взагалі в базі даних
+        if product_id not in database:
+            print("[Помилка] Товар з таким ID не знайдено!")
+            return
+
+        product = database[product_id] # Беремо товар з бази
+
+        # perevirka, chy ye vin na skladі
+        if product["stock"] <= 0:
+            print("[Помилка] Цього товару немає в наявності!")
+            return
+
+        # dodaemmo v koshyk: yakshcho vin uzhe ye — zbilshuemo kilkist, yakshcho ni — stvorymo novyy element
+        if product_id in cart:
+            cart[product_id] += 1
+        else:
+            cart[product_id] = 1
+
+        # vidnimayemo 1 shtuku z skladskogo zalishku, bo vin dodavavsya v koshyk
+        product["stock"] -= 1
+        print(f"[Успіх] Товар '{product['name']}' додано до кошика.")
+
+    except ValueError:
+        print("[Помилка] Будь ласка, вводьте тільки цифри!")
+
+
+def show_and_edit_cart():
+    # koshyk porozhniy, poka ne dodano nizhchoho
+    if not cart:
+        print("\nВаш кошик порожній.")
+        return
+
+    print("\n--- ВАШ КОШИК ---")
+    total_sum = 0
+    
+    # perebirayemo vsi tovari v koshyku, shchob pokazaty yikh i obchyslyty zahalnu sumu
+    for product_id, quantity in cart.items():
+        product = database[product_id] # Дістаємо інформацію про товар з бази
+        item_total = product["price"] * quantity # Рахуємо суму за цей конкретний товар
+        total_sum += item_total # Додаємо до загальної суми кошика
+        
+        print(f"ID: {product_id} | {product['name']} | {quantity} шт. х {format_price(product['price'])} = {format_price(item_total)}")
+    
+    print(f"Загальна вартість кошика: {format_price(total_sum)}")
+
+    # zapytuyemo, yakshcho pokupets' khoche vidaliti tovar z koshyka
+    choice = input("\nВведіть ID товару для видалення (або Enter, щоб повернутись): ")
+    if choice:
+        try:
+            remove_id = int(choice)
+            if remove_id in cart:
+                # Повертаємо 1 штуку товару назад на склад
+                database[remove_id]["stock"] += 1
+                
+                # Зменшуємо кількість у кошику
+                cart[remove_id] -= 1
+                
+                # Повністю видаляємо ID з кошика
+                if cart[remove_id] == 0:
+                    del cart[remove_id]
+                
+                print("[Успіх] Товар видалено з кошика.")
+            else:
+                print("[Помилка] Цього товару немає у вашому кошику.")
+        except ValueError:
+            print("[Помилка] Невірний ID!")
+
+
+def buy_products():
+    if not cart:
+        print("\nКошик порожній. Купувати нічого!")
+        return
+
+    # Рахуємо фінальну суму за допомогою циклу або генератора
+    total_sum = sum(database[pid]["price"] * qty for pid, qty in cart.items())
+    
+    print(f"\n[Дякуємо за покупку!] Ви успішно придбали товари на суму: {format_price(total_sum)}")
+    
+    # Спустошуємо кошик (товари вже були списані зі складу під час додавання)
+    cart.clear()
+def admin_menu():
+    password = input("\nВведіть пароль адміністратора: ")
+    if password != "admin":
+        print("[Помилка] Невірний пароль! Доступ закрити.")
+        return
+
+    print("\n=== СКЛАДСЬКІ ЗАЛИШКИ (АДМІН) ===")
+    # Адмін бачить повний список товарів та їх реальні залишки, навіть якщо там 0
+    for product_id, product in database.items():
+        print(f"ID: {product_id} | Назва: {product['name']} | Залишок на складі: {product['stock']} шт.")
+
+
+# --- ГОЛОВНИЙ ЦИКЛ ПРОГРАМИ ---
+while True:
+    print("\n=== ГОЛОВНЕ МЕНЮ ===")
+    print("1. Переглянути каталог товарів")
+    print("2. Додати товар в кошик")
+    print("3. Переглянути кошик та видалити товар")
+    print("4. Купити товари (оформити замовлення)")
+    print("5. Вхід для Адміністратора")
+    print("0. Вихід з програми")
+    
+    choice = input("Виберіть дію: ")
+
+    if choice == "1":
+        show_catalog()
+    elif choice == "2":
+        add_to_cart()
+    elif choice == "3":
+        show_and_edit_cart()
+    elif choice == "4":
+        buy_products()
+    elif choice == "5":
+        admin_menu()
+    elif choice == "0":
+        print("Програму завершено. Гарного дня!")
+        break
+    else:
+        print("Невірна команда! Спробуйте ще раз.")
